@@ -1,16 +1,15 @@
 Package: latentoverlap
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Correcting Total Score Associations for Measurement Overlap
 Version: 0.1.0
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
+      "Paul", "Lodder",
+      email = "paultwinlodder@gmail.com",
       role = c("aut", "cre")
     )
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
+Description: When two constructs are measured with partly overlapping items, their observed 		total-score correlation may partly reflect shared item content rather than a construct-		level association. The latentoverlap package re-expresses the observed total-score 		correlation as the latent association implied by an explicit measurement model.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

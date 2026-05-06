@@ -78,7 +78,7 @@
 #' ## One-factor model with five ordinal items
 #' load1 <- matrix(rep(.80, 5), nrow = 1)
 #'
-#' sim1 <- ordskew(
+#' sim1 <- sim_items_lvm(
 #'   N = 500,
 #'   seeds = 123,
 #'   nfactors = 1,
@@ -110,7 +110,7 @@
 #'   byrow = TRUE
 #' )
 #'
-#' sim2 <- ordskew(
+#' sim2 <- sim_items_lvm(
 #'   N = 500,
 #'   seeds = 123,
 #'   nfactors = 2,
