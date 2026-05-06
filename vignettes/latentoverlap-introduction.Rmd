@@ -173,7 +173,6 @@ sens_item <- rho_overlap_sensitivity(
   show_progress = FALSE
 )
 
-head(sens_item$results)
 ```
 
 The sensitivity curve can again be visualized using the plot method.
