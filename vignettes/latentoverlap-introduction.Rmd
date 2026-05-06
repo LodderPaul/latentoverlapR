@@ -1,0 +1,201 @@
+---
+title: "Correcting Associations for Measurement Overlap"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Correcting Associations for Measurement Overlap}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+
+```
+
+```{r setup}
+library(latentoverlap)
+```
+
+# Why correct for measurement overlap?
+
+When two constructs are measured with partly overlapping items, their observed total-score correlation may partly reflect shared item content rather than a construct-level association. The latentoverlap package re-expresses the observed total-score correlation as the latent association implied by an explicit measurement model.
+
+The corrected association should therefore be interpreted as model-based: it depends on the assumed reliabilities, loadings, thresholds, and degree of overlap.
+
+# Basic continuous example
+
+Suppose two six-item scales correlate r = .60. Both scales have reliabilities around .80, and one item in each scale is assumed to overlap with a cross-loading of .30.
+
+```{r}
+
+mod <- reliability_model(
+  relA = .80,
+  relB = .85,
+  kA = 6,
+  kB = 6
+)
+
+rho_correction(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  ci = "none"
+)
+```
+
+
+## Analytic confidence intervals
+
+The recommended default is the analytic confidence interval.
+
+### Using standard error observed association
+```{r}
+rho_correction(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  ci = "analytic",
+  r_SE = .10
+)
+```
+
+### Using confidence intervals observed association
+```{r}
+rho_correction(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  ci = "analytic",
+  r_ci = c(.45, .72)
+)
+
+```
+
+# Ordinal item scores example
+
+For ordinal data, thresholds must be specified. Ordinal corrections are computationally more intensive. The analytic CI is therefore typically preferred over bootstrap.
+
+```{r}
+thr5 <- c(-1.645, -0.643, 0.643, 1.645)
+
+rho_correction(
+  r_obs = .60,
+  type = "ordinal",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  thrA = thr5,
+  thrB = thr5,
+  ci = "analytic",
+  r_SE = .10
+)
+```
+
+
+# Parametric bootstrapped confidence interval
+
+The bootstrap uses the same Fisher-z uncertainty model but is slower, especially for ordinal models.
+
+```{r}
+rho_correction(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  ci = "bootstrap",
+  r_SE = .10,
+  n_boot = 500
+)
+```
+
+
+# Sensitivity analysis
+The corrected association depends on the assumed overlap. A sensitivity analysis is therefore recommended.
+
+## Multiply overall overlap degree across grid values
+
+```{r}
+sens <- rho_overlap_sensitivity(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .30,
+  cB = .30,
+  k_overlap = 1,
+  ci = "analytic",
+  r_SE = .10,
+  grid = seq(0, 2, by = .05)
+)
+
+plot(sens)
+```
+
+overlap_value = 1 corresponds to the assumed overlap
+Values below/above represent weaker/stronger overlap
+
+
+## Vary overlap degree in item-specific sensitivity analysis
+
+Instead of varying all overlap parameters simultaneously, a sensitivity analysis can also evaluate how strongly the corrected association depends on one specific overlapping item.
+
+In the example below, only the first overlapping item in scale A is varied while the remaining overlap assumptions are kept constant.
+
+```{r}
+sens_item <- rho_overlap_sensitivity(
+  r_obs = .60,
+  type = "continuous",
+  measurement_model = mod,
+  cA_vec = c(.30, 0, 0, 0, 0, 0),
+  cB_vec = c(.30, 0, 0, 0, 0, 0),
+  ci = "analytic",
+  r_SE = .10,
+  vary = "item",
+  focal_scale = "A",
+  focal_item = 1,
+  grid = seq(0, .80, by = .05),
+  show_progress = FALSE
+)
+
+head(sens_item$results)
+```
+
+The sensitivity curve can again be visualized using the plot method.
+
+```{r}
+plot(sens_item)
+```
+
+This type of analysis is useful when researchers suspect that one specific overlapping item may disproportionately influence the corrected association.
+
+
+
+# Reporting results
+
+A transparent report should include:
+
+- observed total-score correlation
+- assumed measurement model
+- overlap assumptions
+- corrected association and CI
+- sensitivity analysis
+
+## Example:
+The observed correlation was corrected using a parallel measurement model with one overlapping item pair (cross-loadings = .30). The corrected latent association was reported with an analytic confidence interval. A sensitivity analysis evaluated robustness across alternative overlap assumptions.
+
