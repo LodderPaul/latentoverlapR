@@ -25,9 +25,33 @@ with higher prevalence of lower response categories.
 \item \code{"Negative_skewness"} for negatively skewed response distributions
 with higher prevalence of higher response categories.
 }}
+
+\item{min_prob}{Minimum allowable probability for any response category.
+Used to avoid extremely sparse categories. Must be greater than 0 and small
+enough that \code{min_prob * n_categories < 1}.}
+
+\item{skew_strength}{Numeric value controlling the severity of skewness for
+asymmetric response distributions. Larger values produce stronger skewness.
+Values close to 0 produce relatively mild skewness, whereas larger values
+increasingly concentrate responses in the extreme categories. Typical values
+range from approximately 0.2 (mild skewness) to 1.0 (strong skewness), with
+the default value of 0.55 producing moderate skewness. Only used when
+\code{shape} is \code{"Positive_skewness"} or
+\code{"Negative_skewness"}.}
+
+\item{return_probs}{Logical. If \code{FALSE} (default), only the thresholds
+are returned. If \code{TRUE}, a list containing both thresholds and category
+probabilities is returned.}
 }
 \value{
-A numeric vector containing threshold values on the latent-response scale.
+If \code{return_probs = FALSE}, a numeric vector containing threshold values
+on the latent-response scale.
+
+If \code{return_probs = TRUE}, a list with:
+\itemize{
+\item \code{thresholds}: threshold values on the latent-response scale.
+\item \code{probabilities}: category probabilities used to generate the thresholds.
+}
 }
 \description{
 Generates threshold parameters for ordinal item responses under
@@ -40,10 +64,14 @@ scale and can be used in \code{\link{rho_correction}} when
 Thresholds are currently implemented for ordinal items with
 2 to 7 response categories.
 
-The thresholds are predefined values chosen to produce plausible ordinal
-response distributions for simulation studies and sensitivity analyses.
-They can be supplied directly to the \code{thrA} and \code{thrB} arguments
-of \code{\link{rho_correction}}.
+The thresholds are generated from target category probabilities using the
+inverse cumulative standard normal distribution. Symmetric thresholds are
+based on predefined approximately symmetric response distributions, whereas
+skewed thresholds are generated from exponentially decreasing category
+probabilities controlled by \code{skew_strength}.
+
+The resulting thresholds can be supplied directly to the \code{thrA} and
+\code{thrB} arguments of \code{\link{rho_correction}}.
 }
 \examples{
 # Symmetric thresholds for a 5-category item
@@ -56,6 +84,13 @@ generate_thresholds(
 generate_thresholds(
   n_categories = 4,
   shape = "Positive_skewness"
+)
+
+# Return both thresholds and category probabilities
+generate_thresholds(
+  n_categories = 5,
+  shape = "Negative_skewness",
+  return_probs = TRUE
 )
 
 }
