@@ -46,47 +46,73 @@
 #'
 #' @export
 generate_thresholds <- function(n_categories,
-                                shape = c("Symmetric", "Positive_skewness", "Negative_skewness")) {
+                                shape = c("Symmetric", "Positive_skewness", "Negative_skewness"),
+                                min_prob = 0.01,
+                                skew_strength = 0.55,
+                                return_probs = FALSE) {
   shape <- match.arg(shape)
   K <- as.integer(n_categories)
 
-  thr_table <- list(
-    `2` = list(
-      Symmetric           = c( 0.000),
-      Positive_skewness   = c( 1.052),
-      Negative_skewness   = c(-1.052)
-    ),
-    `3` = list(
-      Symmetric           = c(-0.842,  0.842),
-      Positive_skewness   = c( 0.994,  2.721),
-      Negative_skewness   = c(-2.721, -0.994)
-    ),
-    `4` = list(
-      Symmetric           = c(-1.282,  0.000,  1.282),
-      Positive_skewness   = c( 0.925,  2.376,  3.693),
-      Negative_skewness   = c(-3.693, -2.376, -0.925)
-    ),
-    `5` = list(
-      Symmetric           = c(-1.645, -0.643, 0.643,   1.645),
-      Positive_skewness   = c( 0.822,  1.944,  3.248,  4.312),
-      Negative_skewness   = c(-4.312, -3.248, -1.944, -0.822)
-    ),
-    `6` = list(
-      Symmetric           = c(-1.645, -0.842,  0.000,  0.842,  1.645),
-      Positive_skewness   = c( 0.750,  1.817,  2.776,  3.690,  4.525),
-      Negative_skewness   = c(-4.525, -3.690, -2.776, -1.817, -0.750)
-    ),
-    `7` = list(
-      Symmetric           = c(-1.881, -1.175, -0.524,  0.524, 1.175, 1.881),
-      Positive_skewness   = c( 0.623,  1.501,  2.250,  3.066,  3.795,  4.430),
-      Negative_skewness   = c(-4.430, -3.795, -3.066, -2.250, -1.501, -0.623)
-    )
-  )
-
-  key <- as.character(K)
-  if (!key %in% names(thr_table)) {
+  if (K < 2 || K > 7) {
     stop("generate_thresholds: implemented only for 2-7 categories.")
   }
 
-  thr_table[[key]][[shape]]
+  if (min_prob <= 0 || min_prob * K >= 1) {
+    stop("min_prob must be > 0 and min_prob * n_categories must be < 1.")
+  }
+
+  # Helper: convert category probabilities to normal thresholds
+  probs_to_thresholds <- function(probs) {
+    if (any(probs <= 0)) stop("All category probabilities must be > 0.")
+    probs <- probs / sum(probs)
+    qnorm(cumsum(probs)[-length(probs)])
+  }
+
+  # Symmetric target category probabilities
+  sym_probs <- switch(
+    as.character(K),
+    "2" = c(.50, .50),
+    "3" = c(.20, .60, .20),
+    "4" = c(.10, .40, .40, .10),
+    "5" = c(.05, .20, .50, .20, .05),
+    "6" = c(.05, .15, .30, .30, .15, .05),
+    "7" = c(.03, .09, .18, .40, .18, .09, .03)
+  )
+
+  if (shape == "Symmetric") {
+    probs <- sym_probs
+  } else {
+    # Monotone skewed target probabilities.
+    # Positive_skewness: many responses in low categories, few in high categories.
+    raw <- exp(-skew_strength * (0:(K - 1)))
+    probs_pos <- raw / sum(raw)
+
+    # Enforce minimum category probability
+    probs_pos <- pmax(probs_pos, min_prob)
+    probs_pos <- probs_pos / sum(probs_pos)
+
+    if (shape == "Positive_skewness") {
+      probs <- probs_pos
+    } else {
+      probs <- rev(probs_pos)
+    }
+  }
+
+  # Final safeguard
+  probs <- pmax(probs, min_prob)
+  probs <- probs / sum(probs)
+
+  thresholds <- probs_to_thresholds(probs)
+
+  if (return_probs) {
+    return(list(
+      thresholds = thresholds,
+      probabilities = probs
+    ))
+  }
+
+  thresholds
 }
+
+
+

@@ -6,7 +6,10 @@
 \usage{
 generate_thresholds(
   n_categories,
-  shape = c("Symmetric", "Positive_skewness", "Negative_skewness")
+  shape = c("Symmetric", "Positive_skewness", "Negative_skewness"),
+  min_prob = 0.01,
+  skew_strength = 0.55,
+  return_probs = FALSE
 )
 }
 \arguments{
