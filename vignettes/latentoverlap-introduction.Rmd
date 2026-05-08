@@ -29,75 +29,95 @@ The corrected association should therefore be interpreted as model-based: it dep
 
 # Basic continuous example
 
-Suppose two six-item scales correlate r = .60. Both scales have reliabilities around .80, and one item in each scale is assumed to overlap with a cross-loading of .30.
+Suppose two six-item scales correlate r = .50. Both scales have excellent reliabilities around .90, and one item in each scale is assumed to overlap with a crossloading of .40. The re-expressed latent association is r = .42. This association is both corrected for measurement overlap as well as for attenuation due to scale unreliability.
 
 ```{r}
 
 mod <- reliability_model(
-  relA = .80,
-  relB = .85,
+  relA = .90,
+  relB = .90,
   kA = 6,
   kB = 6
 )
 
 rho_correction(
-  r_obs = .60,
+  r_obs = .50,
   type = "continuous",
   measurement_model = mod,
-  cA = .30,
-  cB = .30,
+  cA = .40,
+  cB = .40,
   k_overlap = 1,
   ci = "none"
 )
 ```
 
+The feasible observed correlation range under the assumed model is not a confidence interval, but indicates that, for the specified measurement model and overlap assumptions, only observed correlations between −0.883 and 0.914 can be reproduced by theoretically possible latent correlations within the interval [−1,1]. 
 
 ## Analytic confidence intervals
 
-The recommended default is the analytic confidence interval.
+The uncertainty in the estimated total score correlation can be propagated to the re-expressed correlation under the assumed measurement model via Fisher's Z transformation. The recommended default method is the analytic confidence interval that applies the re-expression method to the lower and upper bound of the confidence interval of the observed association. This requires as input either a standard error or confidence interval bounds. The 95% confidence interval of the re-expressed correlation ranges from 0.147 to 0.647, suggesting the re-expressed association is still statistically significant. 
 
-### Using standard error observed association
+### Using standard error of observed association
 ```{r}
 rho_correction(
-  r_obs = .60,
+  r_obs = .50,
   type = "continuous",
   measurement_model = mod,
-  cA = .30,
-  cB = .30,
+  cA = .40,
+  cB = .40,
   k_overlap = 1,
   ci = "analytic",
   r_SE = .10
 )
 ```
 
-### Using confidence intervals observed association
+### Using confidence interval of observed association
 ```{r}
 rho_correction(
-  r_obs = .60,
+  r_obs = .50,
   type = "continuous",
   measurement_model = mod,
-  cA = .30,
-  cB = .30,
+  cA = .40,
+  cB = .40,
   k_overlap = 1,
   ci = "analytic",
-  r_ci = c(.45, .72)
+  r_ci = c(.28, .67),
+  conf_level = .95
 )
 
 ```
 
+### Parametric bootstrapped confidence interval
+
+The uncertainty in the re-expressed association can also be expressed via parametric bootstrapping by specifying the standard error of the observed association and the desired number of bootstrap replications. The bootstrap uses the same Fisher-z uncertainty model but is slower, especially for ordinal models.
+
+```{r}
+rho_correction(
+  r_obs = .50,
+  type = "continuous",
+  measurement_model = mod,
+  cA = .40,
+  cB = .40,
+  k_overlap = 1,
+  ci = "bootstrap",
+  r_SE = .10,
+  n_boot = 2000
+)
+```
+
 # Ordinal item scores example
 
-For ordinal data, thresholds must be specified. Ordinal corrections are computationally more intensive. The analytic CI is therefore typically preferred over bootstrap.
+For ordinal data, thresholds must be specified to link the ordered categorical items to an assumed underlying continuous item response distribution. The 'generate_thresholds()' helper function can be used to obtain template threshold parameter values given the number of response options and the shape of the ordinal response distribution (e.g., symmetric, positive/negative skew). Ordinal corrections are computationally more intensive. The analytic CI is therefore typically preferred over bootstrap.
 
 ```{r}
 thr5 <- c(-1.645, -0.643, 0.643, 1.645)
 
 rho_correction(
-  r_obs = .60,
+  r_obs = .50,
   type = "ordinal",
   measurement_model = mod,
-  cA = .30,
-  cB = .30,
+  cA = .40,
+  cB = .40,
   k_overlap = 1,
   thrA = thr5,
   thrB = thr5,
@@ -106,70 +126,53 @@ rho_correction(
 )
 ```
 
-
-# Parametric bootstrapped confidence interval
-
-The bootstrap uses the same Fisher-z uncertainty model but is slower, especially for ordinal models.
-
-```{r}
-rho_correction(
-  r_obs = .60,
-  type = "continuous",
-  measurement_model = mod,
-  cA = .30,
-  cB = .30,
-  k_overlap = 1,
-  ci = "bootstrap",
-  r_SE = .10,
-  n_boot = 500
-)
-```
+The re-expressed association of r = .461 is larger under the ordinal model than under the continuous model because discretization of the underlying continuous item responses attenuates observed associations. Consequently, a stronger latent association is required to reproduce the same observed total-score correlation under the ordinal model.
 
 
 # Sensitivity analysis
-The corrected association depends on the assumed overlap. A sensitivity analysis is therefore recommended.
+The re-expressed association depends partly on the assumed overlap. A sensitivity analysis is  recommended to assess the robustness of the re-expressed association against various degrees of assumed overlap. The 'multiplier' sensitivity analysis multiplies all crossloadings with the same range of factors specified via the 'grid' argument. A multiplier of 1 equals the cross-loadings assumed to be most plausible, while a multipliers above or below 1 explore higher and lower degrees of measurement overlap, respectively. The plot() function can be applied to the sensitivity analysis results object to facilitate interpretation.   
 
 ## Multiply overall overlap degree across grid values
 
 ```{r}
 sens <- rho_overlap_sensitivity(
-  r_obs = .60,
+  r_obs = .50,
   type = "continuous",
   measurement_model = mod,
-  cA = .30,
-  cB = .30,
+  cA = .40,
+  cB = .40,
   k_overlap = 1,
   ci = "analytic",
   r_SE = .10,
+  vary = "multiplier",
   grid = seq(0, 2, by = .05)
 )
 
 plot(sens)
 ```
 
-overlap_value = 1 corresponds to the assumed overlap
-Values below/above represent weaker/stronger overlap
+The black solid line shows the re-expressed association across different degrees of measurement overlap and the grey shade visualizes the 95% confidence interval. The black dashed vertical line indicates the degree of overlap at which the confidence interval starts to include a re-expressed association of zero. In this example, increasing the cross-loading from 0.40 to 0.76 would render the re-expressed association not statistically significant.
 
 
 ## Vary overlap degree in item-specific sensitivity analysis
 
-Instead of varying all overlap parameters simultaneously, a sensitivity analysis can also evaluate how strongly the corrected association depends on one specific overlapping item.
+Instead of varying all overlap parameters simultaneously, a second type of sensitivity analysis can be conducted to evaluate how strongly the corrected association depends on overlap degree for one specific overlapping item. This type of analysis is useful when researchers suspect that one specific overlapping item may disproportionately influence the corrected association.
 
-In the example below, only the first overlapping item in scale A is varied while the remaining overlap assumptions are kept constant.
+In the example below, only the first overlapping item in scale A is varied across the crossloading values specified in the 'grid' argument, while the remaining overlap assumptions are kept constant. Note that this sensitivity analysis does not make use of a multiplier, because the user can directly specify a range of crossloadings for a specific item. 
 
 ```{r}
 sens_item <- rho_overlap_sensitivity(
-  r_obs = .60,
+  r_obs = .50,
   type = "continuous",
   measurement_model = mod,
-  cA_vec = c(.30, 0, 0, 0, 0, 0),
-  cB_vec = c(.30, 0, 0, 0, 0, 0),
+  cA_vec = c(.40, 0, 0, 0, 0, 0),
+  cB_vec = c(.40, 0, 0, 0, 0, 0),
   ci = "analytic",
   r_SE = .10,
   vary = "item",
   focal_scale = "A",
   focal_item = 1,
-  grid = seq(0, .80, by = .05),
+  grid = seq(0, .90, by = .05),
   show_progress = FALSE
 )
 
@@ -181,7 +184,7 @@ The sensitivity curve can again be visualized using the plot method.
 plot(sens_item)
 ```
 
-This type of analysis is useful when researchers suspect that one specific overlapping item may disproportionately influence the corrected association.
+The results indicate that the re-expressed association remains statistically significant across the investigated range of cross-loadings for item 1 in scale A. Because cross-loadings above .90 are generally considered implausibly large in most applied measurement settings, these findings suggest that the statistical significance of the re-expressed association is relatively robust to increasing degrees of measurement overlap for that specific item.
 
 
 
@@ -191,10 +194,10 @@ A transparent report should include:
 
 - observed total-score correlation
 - assumed measurement model
-- overlap assumptions
+- assumed measurement overlap
 - corrected association and CI
-- sensitivity analysis
+- results sensitivity analysis
 
 ## Example:
-The observed correlation was corrected using a parallel measurement model with one overlapping item pair (cross-loadings = .30). The corrected latent association was reported with an analytic confidence interval. A sensitivity analysis evaluated robustness across alternative overlap assumptions.
+The observed correlation of r = .50 (SE = .10) was corrected using a parallel measurement model for continuous item scores. Assuming one overlapping item pair with crossloadings of .40, the re-expressed latent association was r = .42, 95%CI = [0.12, 0.67]. A sensitivity analysis indicated that the re-expressed associations was statistically significant for crossloadings up to .76. 
 
