@@ -515,9 +515,31 @@ rho_overlap_sensitivity <- function(
   }
 
   if (ci != "none") {
-    idx_crit <- which(results$ci_includes_zero)[1]
-    critical_overlap <- if (length(idx_crit)) results$overlap_value[idx_crit] else NA_real_
+
+    # Use the observed-overlap grid point as reference
+    rho_obs_point <- results$rho_hat[idx_obs]
+
+    if (is.na(rho_obs_point)) {
+      idx_crit <- NA_integer_
+    } else if (rho_obs_point > 0) {
+      # For positive effects, significance is lost when lower CI reaches/crosses zero
+      candidate <- which(results$overlap_value >= observed_overlap &
+                           !is.na(results$CI_lower) &
+                           results$CI_lower <= 0)
+      idx_crit <- if (length(candidate)) candidate[1] else NA_integer_
+    } else if (rho_obs_point < 0) {
+      # For negative effects, significance is lost when upper CI reaches/crosses zero
+      candidate <- which(results$overlap_value >= observed_overlap &
+                           !is.na(results$CI_upper) &
+                           results$CI_upper >= 0)
+      idx_crit <- if (length(candidate)) candidate[1] else NA_integer_
+    } else {
+      idx_crit <- idx_obs
+    }
+
+    critical_overlap <- if (!is.na(idx_crit)) results$overlap_value[idx_crit] else NA_real_
     ci_includes_zero_at_observed <- results$ci_includes_zero[idx_obs]
+
   } else {
     critical_overlap <- NA_real_
     ci_includes_zero_at_observed <- NA
